@@ -1,0 +1,64 @@
+<?php 
+/*--------------------------------------------------
+Widget Custom Text: Título + Conteudo + link
+---------------------------------------------------*/
+
+add_action( 'widgets_init', 'custom_text_widgets' );
+function custom_text_widgets() { register_widget( 'Custom_Text' ); }
+class Custom_Text extends WP_Widget {
+function Custom_Text() {
+  $widget_ops = array( 'classname' => 'custom_Text', 'description' => 'Adicione aqui conte&uacute;do personalizado, Google maps, flash e jQuery.' );
+	$this->WP_Widget( 'custom_text_widgets', 'Custom Text', $widget_ops);
+	}	
+
+function widget( $args, $instance ) { extract( $args );
+	$title = apply_filters('widget_title', $instance['title'] );
+	$content = $instance['content'];
+	$content = $instance['url']; ?>
+
+<?php echo $before_widget; 
+	if ( $title ) echo $before_title . $title . $after_title; ?>
+			
+	<div class="customtext">
+	<a href="http://<?php echo $url ?>"><?php echo $content ?></a>
+	</div>
+		
+<?php echo $after_widget;	}
+function update( $new_instance, $old_instance ) {
+	$instance = $old_instance;
+	$instance['title'] = strip_tags( $new_instance['title'] );
+	$instance['content'] = ( $new_instance['content'] );
+	$instance['url'] = ( $new_instance['url'] );
+	return $instance; }
+
+function form( $instance ) {
+	$defaults = array( 'title' => '');
+	$defaults = array( 'content' => '');
+	$defaults = array( 'url' => '');
+	$instance = wp_parse_args( (array) $instance, $defaults ); ?>
+
+	<p class="tb-input">
+	<label for="<?php echo $this->get_field_id( 'title' ); ?>">T&iacute;tulo:</label><br/>
+	<input type="text" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" value="<?php echo $instance['title']; ?>" />
+	</p>
+
+	<p class="tb-textarea">
+	<label for="<?php echo $this->get_field_id( 'content' ); ?>">Conte&uacute;do:</label>
+	<textarea name="<?php echo $this->get_field_name( 'content' ); ?>"><?php echo $instance['content']; ?></textarea>
+    </p>
+
+	<p class="tb-input">
+	<label for="<?php echo $this->get_field_id('url'); ?>">Link:</label><br/>
+	<input type="text" name="<?php echo $this->get_field_name('url'); ?>" value="<?php echo $instance['url']; ?>" />
+ 	</p>
+
+<style>
+.tb-input input,
+.tb-textarea 
+textarea{
+	width:100%;
+	display:block;
+	clear:both;}
+</style>	    	
+
+<?php } } ?>
