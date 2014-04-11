@@ -1,0 +1,395 @@
+<?php
+/* ===========================================================
+	
+	THEME OPTIONS
+	
+	Opções validas
+		"name" => "Nome do campo",
+		"id" => $shortname."facebook",
+		"type" => "text", "textarea", "checkbox", "title", "hr",
+		"info" => "Descrição do campo"
+		"height" => "200px"
+		"width" => "90%"
+		"class" => "col2", "col3",
+		
+		
+		
+	MODO DE USAR-----------------------------------------------------
+		
+	* Modo simples de exibir o value
+		<?php echo get_option('leo_contato'); ?>  
+		
+	* Verifica se existe um value e exibe
+		<?php if(get_option('tb_fb')): ?> <?php echo get_option('tb_fb'); ?>	<?php endif; ?>
+		
+	* Usando o "nl2br" adicionamos quebra de linha no o value
+		<?php echo nl2br(get_option('tb_fb')); ?>  
+
+	* Usando "stripslashes" adicionamos suporte para scripts no o value
+		<?php echo(stripslashes (get_option('tb_analytics'))); ?>  
+		
+	
+	Atualizado em: 06/04/2014 ------------------------------------
+
+=================================================================*/
+
+
+
+$themename = "TriboPress";
+$shortname = "tb_"; //pre_fixo 
+
+//exibe as categorias cadastradas
+$categories = get_categories('hide_empty=0&orderby=name');
+$wp_cats = array();
+foreach ($categories as $category_list ) {
+	$wp_cats[$category_list->cat_ID] = $category_list->cat_name;
+}
+array_unshift($wp_cats, "Escolha uma Categoria"); 
+
+$options = array (
+
+/*================================================
+		CONFIGURAÇÕES DE SEO 
+================================================*/
+array(
+	"type" => "title",
+	"name" => "Configurações de SEO",
+	"class" => "admin",
+	),
+
+array(
+	"start" => "<div id=\"otimizacao\">",
+	"name" => "Meta Keywords",
+	"id" => $shortname."keywords",
+	"type" => "text",
+	"info" => "Adicione palavras chaves relevantes ao segmento do seu site. Separe as palavras usando <b>virgulas</b>",
+	),
+
+
+array(  
+	"name" => "Código Analytics",
+	"id" => $shortname."analytics",
+	"type" => "textarea",
+	"height" => "200px",
+	"info" => "Adicione aqui o seu código de acompanhamento analytics"
+	),
+
+
+
+
+
+
+
+
+/*================================================
+		CONFIGURAÇÕES DA HOME 
+================================================*/
+array("type" => "hr"),
+array(
+	"type" => "title",
+	"name" => "Configurações da Home",
+	"class" => "home",
+	),
+	
+array(
+	"name" => "Categoria de destaque",
+	"id" => $shortname."feat_cat",
+	"type" => "select",
+	"options" => $wp_cats,
+	"info" => "Escolha uma categoria para exibir na Home."
+	),
+	
+array(
+	"name" => "Chamada Home",
+	"id" => $shortname."acount",
+	"type" => "text"
+	),
+
+
+array(
+	"name" => "URL Chamada Home",
+	"id" => $shortname."aurl",
+	"type" => "text"
+	),
+
+
+array(
+	"name" => "Intro Home",
+	"id" => $shortname."text_intro",
+	"type" => "textarea",
+	"info" => "Adicione um texto de introdução em sua Home."
+	),
+
+
+array( "name" => "Código CSS Personalizado",
+	"id" => $shortname."custom_css",
+	"type" => "textarea",
+	"height" => "200px",
+	"info" => "Precisar adicionar um código CSS Personalizado? Adicione aqui. Mas cuidade! Essa regra substitui os outras styles. ex: a.button{color:green}"
+	),
+
+
+
+
+
+
+
+/*================================================
+		INFORMAÇÕES DE CONTATO 
+================================================*/
+array("type" => "hr"),
+array(
+	"type" => "title",
+	"name" => "Informações de Contato",
+	"class" => "id",
+	),
+
+array(
+	"id" => $shortname."info",
+	"type" => "checkbox",
+	"info" => "Marque o checkbox para exibir informações de contato na página de contato.",
+	),
+
+
+array(
+	"name" => "Telefone / Fax 1",
+	"id" => $shortname."tel1",
+	"class" => "col2",
+	"type" => "text"
+	),
+
+
+array(
+	"name" => "E-mail ",
+	"id" => $shortname."email",
+	"class" => "col2",
+	"type" => "text"
+	),
+
+
+array(		
+	"name" => "Endere&ccedil;o",
+	"id" => $shortname."endereco",
+	"type" => "textarea",
+	"class" => "col2",
+	"info" => "Endereço de localização. OBS: utilize a tag <b>< br/></b> para quebra de linha."
+	),
+
+
+array(
+	"name" => "Google Map",
+	"id" => $shortname."map",
+	"type" => "textarea",
+	"class" => "col2",
+	"info" => "Adicione a URL do mapa de localização de sua empresa neste campo"
+	),
+	
+	
+	
+/*================================================
+		REDES SOCIAIS 
+================================================*/
+array("type" => "hr"),
+array(
+	"type" => "title",
+	"name" => "Redes Sociais",
+	"class" => "share",
+	),
+
+
+array(
+	"name" => "Facebook",
+	"id" => $shortname."fb",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "http://www.facebook.com"
+	),
+array(
+	"name" => "Youtube",
+	"id" => $shortname."yt",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "http://www.youtube.com"
+	),	
+array(
+	"name" => "Twitter",
+	"id" => $shortname."tw",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "http://www.twitter.com"
+	),		
+array(
+	"name" => "Google",
+	"id" => $shortname."go",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "http://www.google.com"
+	),
+array(
+	"name" => "Instagram",
+	"id" => $shortname."ln",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "http://www.instagram.com"
+	),
+	
+array(
+	"name" => "Linkedin",
+	"id" => $shortname."li",
+	"type" => "text",
+	"class" => "col2",
+	"info" => "https://www.linkedin.com/"
+	),
+
+
+array(
+	"type" => "fim",
+	"end" => "</div>"
+	),	
+); // Fim de tudo
+
+
+
+
+function core_admin() { 
+global $themename, $shortname, $options;
+if ( $_GET['page'] == basename(__FILE__) ) { if ( 'save' == $_REQUEST['action'] ) {
+	foreach ($options as $value) { 
+if ($value['type']!='header') { update_option( $value['id'], $_REQUEST[ $value['id'] ] );} }
+	foreach ($options as $value) { 
+if( isset( $_REQUEST[ $value['id'] ] ) ) { 
+update_option( $value['id'], $_REQUEST[ $value['id'] ]  ); } 
+else { delete_option( $value['id'] ); } } header("Location: themes.php?page=theme-options.php&saved=true");
+die; } 
+
+else if( 'reset' == $_REQUEST['action'] ) { foreach ($options as $value) { delete_option( $value['id'] ); }
+header("Location: themes.php?page=theme-options.php&reset=true");
+die; } } 
+
+add_theme_page($themename." settings", "Op&ccedil;&otilde;es do Tema", 'edit_themes', basename(__FILE__), 'core_theme_admin'); }
+function core_theme_admin() { 
+global $themename, $shortname, $options;
+	if ( $_REQUEST['saved'] ) echo '<div id="message" class="updated fade"><p>'.$themename.' configura&ccedil;&otilde;es salvas.</p></div>';
+	if ( $_REQUEST['reset'] ) echo '<div id="message" class="updated fade"><p>'.$themename.' configura&ccedil;&otilde;es resetadas.</p></div>';
+?>
+
+<div id="painel">
+<form method="post">
+<div id="tabdashboard"> 
+
+<?php foreach ($options as $value) { if ($value['type'] == "text") {  echo $value['start']; 
+/*----------------------------------------------------------------------------------------------
+	INPUT TEXT  -  USO: "width" => "80% ou 80px" 
+----------------------------------------------------------------------------------------------*/ ?>
+<p class="label <?php echo $value['class']; ?>"><?php echo $value['name']; ?>
+<span class="note">
+<input onfocus="this.select();" name="<?php echo $value['id']; ?>" type="<?php echo $value['type']; ?>" value="<?php if(get_settings( $value['id'] ) != "") { echo get_settings( $value['id'] ); } else { echo $value['std']; } ?>" />
+<?php echo $value['info']; echo $value['end']; ?></span></p>
+
+
+<?php } elseif ($value['type'] == "textarea") { echo $value['start']; 
+/*----------------------------------------------------------------------------------------------
+	TEXTAREA  -  USO: "width" => "80% ou 80px" / "height" => "80% ou 80px"
+----------------------------------------------------------------------------------------------*/ ?>
+<p class="label <?php echo $value['class']; ?>"><?php echo $value['name']; ?>
+
+<span class="note">
+<textarea name="<?php echo $value['id']; ?>" style="width:<?php echo $value['width']; ?>; height:<?php echo $value['height']; ?>" >
+<?php if ( get_option( $value['id'] ) != "") { echo stripslashes(get_option( $value['id'] )); } else { echo stripslashes($value['std']); } ?></textarea>
+<?php echo $value['info']; echo $value['end']; ?></span></p>
+
+
+<?php } elseif ($value['type'] == "checkbox") { 
+//CHECKBOX -------------------------------------------------------  ?>
+<?php echo $value['start']; ?>
+<p class="label <?php echo $value['class']; ?>"><?php echo $value['name']; ?>
+<span class="note">
+<?php if(get_settings($value['id'])){ $checked = "checked=\"checked\""; }else{ $checked = "";}?>
+<input type="checkbox" name="<?php echo $value['id']; ?>" value="true" <?php echo $checked; ?> />&nbsp;&nbsp;
+<?php echo $value['info']; echo $value['end']; ?></span></p>
+
+
+
+<?php } elseif ($value['type'] == "select") { 
+//SELECT -------------------------------------------------------  ?>
+<?php echo $value['start']; ?>
+<p class="label <?php echo $value['class']; ?>"><?php echo $value['name']; ?>
+<span class="note">
+
+<select name="<?php echo $value['id']; ?>" id="<?php echo $value['id']; ?>">
+<?php foreach ($value['options'] as $option) { ?>
+		<option <?php if (get_settings( $value['id'] ) == $option) { echo 'selected="selected"'; } ?>><?php echo $option; ?></option><?php } ?>
+</select>
+<?php echo $value['info']; echo $value['end']; ?></span></p>
+
+
+
+
+<?php /* TYPE TITLE -------------------- */
+} elseif ($value['type'] == "title") { echo $value['start']; ?><h3 class="<?php echo $value['class']; ?>"><?php echo $value['name'];?></h3><?php echo $value['end']; ?>
+
+<?php /* TYPE HR ---------------------- */
+} elseif($value['type'] == "hr") { echo $value['start']; echo('<hr class="hr">');  ?><?php echo $value['end']; ?>
+
+<?php /* TYPE FIM -------------------- */
+} elseif($value['type'] == "fim") { echo $value['start']; echo('<br class="clr">'); ?><?php echo $value['end']; ?>
+
+
+<?php } elseif ($value['type'] == "header") { } } //fim ?>
+</div> <!-- /#slide-dashboard-->
+
+<div class="option-buttons" style="float:left;">
+	<input name="save" type="submit" class="button-primary" value="Save changes" />
+	<input type="hidden" name="action" value="save" /></div>
+</form>
+<div class="option-buttons" style="float:left; margin-left:30px;">
+<form method="post">
+	<input name="reset" class="button" type="submit" value="Reset" /><input type="hidden" name="action" value="reset" />
+</form>
+</div>
+</div>
+
+<?php } add_action('admin_menu', 'core_admin'); 
+foreach ($options as $value) { if (get_settings( $value['id'] ) === FALSE) { $$value['id'] = $value['std']; } 
+else { $$value['id'] = get_settings( $value['id'] ); } } function dp_settings($key) { global $settings; return $settings[$key];} 
+
+
+
+
+
+/*Add Dashboard - Style Theme Options 
+--------------------------------------------------------*/
+add_action('admin_head', 'theme_options_style');
+function theme_options_style() {
+  echo '<link rel="stylesheet" href="'.get_bloginfo('template_directory'). '/libs/style-options.css" />';
+}
+
+
+/*Add link edite na barra do WordPress
+--------------------------------------------------------*/
+function tbtheme_admin_bar_render() {
+	global $wp_admin_bar;
+    // podemos remover um item de menu usando apenas seu $id
+	$wp_admin_bar->remove_menu('about');
+  $wp_admin_bar->remove_menu('wporg');
+  $wp_admin_bar->remove_menu('documentation');
+  $wp_admin_bar->remove_menu('support-forums');
+  $wp_admin_bar->remove_menu('feedback');
+  $wp_admin_bar->remove_menu('view-site');
+	$wp_admin_bar->remove_menu('comments');
+	
+	$wp_admin_bar->remove_menu('themes');
+	$wp_admin_bar->remove_menu('search');
+	$wp_admin_bar->remove_menu('widgets');
+	$wp_admin_bar->remove_menu('new-media');
+	$wp_admin_bar->remove_menu('new-user');
+
+    // podemos adicionar um item de submenu também
+	$wp_admin_bar->add_menu( array(
+		'parent' => 'site-name', // Adicione o ID pai para criar um sublink
+		'title' => __('Op&ccedil;&otilde;es do Tema'), // link title
+		'href' => admin_url( 'themes.php?page=theme-options.php')
+    ) );
+}
+add_action( 'wp_before_admin_bar_render', 'tbtheme_admin_bar_render' );
+?>
