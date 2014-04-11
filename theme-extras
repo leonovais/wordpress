@@ -1,0 +1,1001 @@
+<?php
+
+/*====================================================================
+	WIDGETS 
+		USO: if (function_exists('dynamic_sidebar')): dynamic_sidebar('Home'); endif;
+====================================================================*/
+if ( function_exists('register_sidebar') ) { 
+	$WidgetAreas = array("Home", "Sidebar", "Footer");
+	foreach ($WidgetAreas as $WidgetName) {
+	register_sidebar(array(
+	'name'=> $WidgetName,
+		'before_widget' => '<div class="widget %2$s">',
+			'after_widget' => '</div>',
+				'before_title' => '<h3>',
+					'after_title' => '</h3>' 
+		)); 
+	}}	
+	
+	
+	
+/* Remove atributos do link css no header
+--------------------------------------------------------- */
+function tb_clean_style_tag($input) {
+  preg_match_all("!<link rel='stylesheet'\s?(id='[^']+')?\s+href='(.*)' type='text/css' media='(.*)' />!", $input, $matches);
+  /* Só exibir mídia se é impressão */
+  $media = $matches[3][0] === 'print' ? ' media="print"' : '';
+  return '<link rel="stylesheet" href="' . $matches[2][0] . '"' . $media . '>' . "\n";
+}
+add_filter('style_loader_tag', 'tb_clean_style_tag');
+
+
+
+
+/* Remove versions from css/js
+--------------------------------------------------------- */
+function remove_cssjs_ver( $src ) {
+if( strpos( $src, '?ver=' ) )
+$src = remove_query_arg( 'ver', $src );
+return $src;
+}
+add_filter( 'style_loader_src', 'remove_cssjs_ver', 1000 );
+add_filter( 'script_loader_src', 'remove_cssjs_ver', 1000 );
+
+
+
+
+/* Tag Title Header
+--------------------------------------------------------- */
+function tb_title( $title, $sep ) {	global $paged, $page;
+	if (is_feed()) return $title;	$title .= get_bloginfo('name');		
+		$site_description = get_bloginfo( 'description', 'display' );
+	if ( $site_description && (is_home() || is_front_page() ))	$title = "$title";
+	if ( $paged >= 2 || $page >= 2 ) $title = "$title $sep " . sprintf( __('P&aacute;gina %s'), max($paged, $page )); 
+	return $title;
+}		
+add_filter( 'wp_title', 'tb_title', 10, 2 );
+
+
+
+
+
+
+/* ===========================================================
+		CUSTOM MENU 
+			1. Add custom menu
+			2. Remove extra args of wp_nav_menu
+			3. Limpa class e adiciona ID no custom menu
+			4. Add page slug as nav IDs					
+============================================================ */
+
+/*	1. add custom menu
+--------------------------------------------------------- */
+if ( function_exists('register_nav_menu') ) { 
+	register_nav_menu('tb_header', 'Header');
+	register_nav_menu('tb_sidebar', 'Sidebar');
+	register_nav_menu('tb_footer', 'Footer');
+	}
+		
+
+
+/* -------------------------------------------------------------------
+	2. Remove extra args of wp_nav_menu
+ 	USO: wp_nav_menu( array('theme_location' => 'navheader' ) ); 
+------------------------------------------------------------------- */
+function tbwp_nav_menu( $args = '' ) {
+	$args['container'] = false;
+	$args['items_wrap'] = '<ul class="menu">%3$s</ul>';
+		return $args;
+	}
+add_filter( 'wp_nav_menu_args', 'tbwp_nav_menu' );
+
+
+
+/*	3. Limpa class e Add ID no custom menu - http://goo.gl/FD7u4A
+--------------------------------------------------------- */
+add_filter('nav_menu_css_class', 'nav_class_filter', 100, 1);
+	function nav_class_filter( $var ) { 
+		return is_array($var)? array_intersect($var, array('current-menu-item')) : ''; 
+	}
+
+
+
+/*	4. Add page slug as nav IDs
+--------------------------------------------------------- */
+add_filter( 'nav_menu_item_id', 'nav_id_filter', 10, 2 );
+	function nav_id_filter( $id, $item ) {
+		return 'nav-'.cleanname($item->title);
+	}
+function cleanname($v) {
+	$v = preg_replace('/[^a-zA-Z0-9s]/', '', $v);
+	$v = str_replace(' ', '-', $v);
+	$v = strtolower($v);
+		return $v;
+	}
+	
+	
+	
+	
+	
+
+
+
+
+/*====================================================================
+	PLUGINS THEME 
+		1. WP-PAGING  - Paginação WordPress
+		2. BREADCRUMBS - Migalhas de pão
+		3. SHARE THIS - Copartinhar em redes sociais
+		4. PREV/NEXT - Navigation entre posts
+		5. POST VIEWS - Exibe numero de visualização dos posts
+=====================================================================*/
+
+
+/*====================================================================
+	1. WP-PAGING  - Paginação WordPress
+	<?php if(function_exists('wp_paging')){wp_paging();} ?>
+=====================================================================*/
+if ( ! function_exists( 'wp_paging' ) ) :
+function wp_paging($prev = '«', $next = '»') {
+global $wp_rewrite, $wp_query;
+$wp_query->query_vars['paged'] > 1 ? $current = $wp_query->query_vars['paged'] : $current = 1;
+$pagination = array(
+  'base' => @add_query_arg('paged','%#%'),
+  'format' => '',
+  'total' => $wp_query->max_num_pages,
+  'current' => $current,
+  'prev_text' => __('&laquo; Anterior'),
+  'next_text' => __('Próxima &raquo;'),
+  'end_size' => 1,
+  'mid_size' => 2,
+  'show_all' => true,
+  'type' => 'list'
+);
+	if($wp_rewrite->using_permalinks())
+	$pagination['base'] = user_trailingslashit( trailingslashit( remove_query_arg( 's', get_pagenum_link( 1 ))) . 'page/%#%/','paged');
+	if(!empty( $wp_query->query_vars['s'] ) )
+	$pagination['add_args'] = array( 's' => get_query_var('s'));
+	echo paginate_links( $pagination );
+	}
+endif;
+	
+
+
+
+/*====================================================================
+	2. BREADCRUMBS - Migalhas de pão
+	<?php if(function_exists('breadcrumb')){breadcrumb();} ?>
+=====================================================================*/
+if ( ! function_exists( 'breadcrumb' ) ) :
+function breadcrumb() {
+  $home = 'Home'; // text for the 'Home' link
+  $before = '<span class="active">'; // tag before the current crumb
+  $after = '</span>'; // tag after the current crumb
+
+  if ( !is_home() && !is_front_page() || is_paged() ) {
+
+    echo '<div class="breadcrumb">';
+
+    global $post;
+    $homeLink = home_url();
+    echo '<a href="' . $homeLink . '">' . $home . '</a> ' . $delimiter . ' ';
+
+    if ( is_category() ) {
+      global $wp_query;
+      $cat_obj = $wp_query->get_queried_object();
+      $thisCat = $cat_obj->term_id;
+      $thisCat = get_category($thisCat);
+      $parentCat = get_category($thisCat->parent);
+      if ($thisCat->parent != 0) echo(get_category_parents($parentCat, TRUE, ' ' . $delimiter . ' '));
+      echo $before . '' . single_cat_title('', false) . '' . $after;
+
+    } elseif ( is_day() ) {
+      echo '<a href="' . get_year_link(get_the_time('Y')) . '">' . get_the_time('Y') . '</a> ' . $delimiter . ' ';
+      echo '<a href="' . get_month_link(get_the_time('Y'),get_the_time('m')) . '">' . get_the_time('F') . '</a> ' . $delimiter . ' ';
+      echo $before . get_the_time('d') . $after;
+
+    } elseif ( is_month() ) {
+      echo '<a href="' . get_year_link(get_the_time('Y')) . '">' . get_the_time('Y') . '</a> ' . $delimiter . ' ';
+      echo $before . get_the_time('F') . $after;
+
+    } elseif ( is_year() ) {
+      echo $before . get_the_time('Y') . $after;
+
+    } elseif ( is_single() && !is_attachment() ) {
+      if ( get_post_type() != 'post' ) {
+        $post_type = get_post_type_object(get_post_type());
+        $slug = $post_type->rewrite;
+        echo '<a href="' . $homeLink . '/' . $slug['slug'] . '/">' . $post_type->labels->singular_name . '</a> ' . $delimiter . ' ';
+        echo $before . get_the_title() . $after;
+      } else {
+        $cat = get_the_category(); $cat = $cat[0];
+        echo get_category_parents($cat, TRUE, ' ' . $delimiter . ' ');
+        echo $before . get_the_title() . $after;
+      }
+
+    } elseif ( !is_single() && !is_page() && get_post_type() != 'post' && !is_404() ) {
+      $post_type = get_post_type_object(get_post_type());
+      echo $before . $post_type->labels->singular_name . $after;
+
+    } elseif ( is_attachment() ) {
+      $parent = get_post($post->post_parent);
+      $cat = get_the_category($parent->ID); $cat = $cat[0];
+      echo get_category_parents($cat, TRUE, ' ' . $delimiter . ' ');
+      echo '<a href="' . get_permalink($parent) . '">' . $parent->post_title . '</a> ' . $delimiter . ' ';
+      echo $before . get_the_title() . $after;
+
+    } elseif ( is_page() && !$post->post_parent ) {
+      echo $before . get_the_title() . $after;
+
+    } elseif ( is_page() && $post->post_parent ) {
+      $parent_id  = $post->post_parent;
+      $breadcrumbs = array();
+      while ($parent_id) {
+        $page = get_page($parent_id);
+        $breadcrumbs[] = '<a href="' . get_permalink($page->ID) . '">' . get_the_title($page->ID) . '</a>';
+        $parent_id  = $page->post_parent;
+      }
+      $breadcrumbs = array_reverse($breadcrumbs);
+      foreach ($breadcrumbs as $crumb) echo $crumb . ' ' . $delimiter . ' ';
+      echo $before . get_the_title() . $after;
+
+    } elseif ( is_search() ) {
+      echo $before . 'Resultado da busca por "' . get_search_query() . '"' . $after;
+
+    } elseif ( is_tag() ) {
+      echo $before . 'Tags do post "' . single_tag_title('', false) . '"' . $after;
+
+    } elseif ( is_author() ) {
+       global $author;
+      $userdata = get_userdata($author);
+      echo $before . 'Artigos escrito por ' . $userdata->display_name . $after;
+
+    } elseif ( is_404() ) {
+      echo $before . 'Erro 404' . $after;
+    }
+
+    if ( get_query_var('paged') ) {
+      if ( is_category() || is_day() || is_month() || is_year() || is_search() || is_tag() || is_author() ) echo ' (';
+     
+      if ( is_category() || is_day() || is_month() || is_year() || is_search() || is_tag() || is_author() ) echo ')';
+    }
+
+    echo '</div>';
+
+  }
+} //breadcrumbs()
+endif;
+
+
+
+
+/*====================================================================
+	3. SHARE THIS - Copartinhar em redes sociais
+	<?php if(function_exists('share')){share();} ?>
+=====================================================================*/
+if ( ! function_exists( 'share' ) ) :
+function share() { ?>
+	<em>Compartilhe: </em>
+	<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+	<a class="addthis_button_tweet"></a>
+	<a class="addthis_button_google_plusone" g:plusone:size="small"></a>
+	<a id="atic_print" href="#" onclick="return addthis_sendto('print');"><span class="at16t_print">Imprimir</span></a>
+	<a id="atic_email" href="#" onclick="return addthis_sendto('email');"><span class="at16t_email">E-mail</span></a>
+	<script defer src="http://s7.addthis.com/js/300/addthis_widget.js#pubid=xa-518135801609e909"></script>
+
+<?php } 
+endif;
+
+
+
+
+/*====================================================================
+	4. PREV/NEXT - Navegação entre post
+	<?php if(function_exists('prevnext')){prevnext();} ?>
+=====================================================================*/
+if ( ! function_exists( 'prevnext' ) ) :
+function prevnext() { ?>
+	<div class="navigation">
+		<span class="prev"><?php previous_post('%','Próxima','no'); ?></span>
+		<?php url_post_type ();?>
+		<span class="next"><?php next_post('%','Anterior','no'); ?></span>
+	</div> 
+<?php } 
+endif;
+
+	   
+	 
+
+/*====================================================================
+	5. POST VIEWS - Exibe numero de visualização dos posts
+	<?php tbPostViews(get_the_ID()); echo getPostViews(get_the_ID()); ?>	
+=====================================================================*/
+if ( ! function_exists( 'getPostViews' ) ) :
+function getPostViews($postID){
+	$count_key = 'post_views_count';
+	$count = get_post_meta($postID, $count_key, true);
+	if($count==''){
+		delete_post_meta($postID, $count_key);
+		add_post_meta($postID, $count_key, '0');
+	return "0 View";
+    }
+	return $count.' Views'; 
+}
+function tbPostViews($postID) {
+	$count_key = 'post_views_count';
+	$count = get_post_meta($postID, $count_key, true);
+	if($count==''){
+		$count = 0;
+		delete_post_meta($postID, $count_key);
+		add_post_meta($postID, $count_key, '0');
+	}else{
+		$count++;
+		update_post_meta($postID, $count_key, $count);
+	}
+}
+remove_action('wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0);	 
+
+//Display Views Custom Column
+function get_PostViews($post_ID){
+	$count_key = 'post_views_count';
+	$count = get_post_meta($post_ID, $count_key, true);
+	return $count;
+} 
+function post_column_views($newcolumn){
+	$newcolumn['col_views'] = __('Views');
+	return $newcolumn;
+} 
+function post_custom_column_views($column_name, $id){
+	if($column_name === 'col_views'){
+		echo get_PostViews(get_the_ID());
+    }
+}
+add_filter('manage_posts_columns', 'post_column_views');
+add_action('manage_posts_custom_column', 'post_custom_column_views',10,2);
+endif;
+
+
+
+
+/* =====================================================================
+	THE_EXCERPT 
+		1. Add Custom Excerpt
+		2. Add the_excerpt com controle de tags direto no tema
+		4. Add excerpt em página
+=====================================================================*/
+	
+	
+/* ------------------------------------------------------------------
+	1. Add Custom Excerpt
+		USO: echo '<p>'.excerpt(get_the_excerpt(), 100).'mais..</p>';
+--------------------------------------------------------------------*/
+function excerpt($excerpt, $nChar) { 
+return strlen($excerpt) > $nChar ? substr($excerpt, 0, $nChar): $excerpt;}
+
+
+
+/* ------------------------------------------------------------------
+	2. Add the_excerpt com controle de tags direto no tema
+		USO: tb_content(300, false, '<img><a>'); 
+--------------------------------------------------------------------*/
+function tb_content($content_length = 250, $allowtags = true, $allowedtags = '') {
+global $post; 
+		$content = $post->post_content; 
+		$content = apply_filters('the_content', $content);
+	if (!$allowtags){ 
+		$allowedtags .= '<style>';
+ 		$content = strip_tags($content, $allowedtags); 
+ }
+		$wordarray = explode(' ', $content, $content_length + 1); 
+	if(count($wordarray) > $content_length) :
+		array_pop($wordarray);	
+		array_push($wordarray, '');	
+		$content = implode(' ', $wordarray);	
+		$content .= "";
+	endif;	
+	echo $content;	
+}
+
+
+
+/* 4. Add excerpt em página
+--------------------------------------------------------------------*/
+function page_excerpt() { 
+	add_post_type_support('page', array('excerpt'));
+	}
+add_action('init', 'page_excerpt');
+
+
+
+
+
+
+
+/* ------------------------------------------------------------------
+	Exibir trecho de páginas
+		USO: echo get_page_content("quem-somos");
+--------------------------------------------------------------------*/
+function get_page_content($page_slug) {
+    $page = get_page_by_path($page_slug);
+    $page_data = get_page($page->ID);
+    $content = apply_filters('the_excerpt', $page_data->post_content);
+    return $content;
+}
+
+
+
+/* ------------------------------------------------------------------
+	 Add custom Title (Limita número de caracteres)
+	 <?php custom_title(30); ?>
+--------------------------------------------------------------------*/ 
+function custom_title($char){
+	$title = get_the_title($post->ID);
+	$title = substr($title,0,$char);
+	echo $title;
+	}
+
+
+
+/*===============================================================================
+	TRUMBNAILS & IMAGENS
+		1. Add support Post Thumbnail
+		2. Remove tamanhos extras de Thumbnail
+		3. Add Post Thumbnail caption
+		4. Exibe URL da imagem
+		5. Diplay imagem destacada ou not-imagem
+================================================================================*/
+
+
+/*------------------------------------------------------
+	1. Add support Post Thumbnail
+		USO: the_post_thumbnail(array(220, 140));
+		USO: the_post_thumbnail(array(220, 140));
+-------------------------------------------------------*/
+if (function_exists('add_theme_support')) { add_theme_support('post-thumbnails'); }
+
+
+
+/* 2. Remove tamanhos extras de Thumbnail
+-------------------------------------------------------*/ 
+update_option('thumbnail_size_w',0);
+update_option('thumbnail_size_h',0);  
+update_option('medium_size_w', 0);
+update_option('medium_size_h', 0);  
+update_option('large_size_w', 0);
+update_option('large_size_h', 0);	
+
+
+
+
+/*-------------------------------------------------------
+	3. Add Post Thumbnail caption
+		USO: the_post_thumbnail_caption();
+		URL: http://goo.gl/U7d6Ba
+-------------------------------------------------------*/
+function the_post_thumbnail_caption() {
+  global $post;
+  $thumbnail_id    = get_post_thumbnail_id($post->ID);
+  $thumbnail_image = get_posts(array('p' => $thumbnail_id, 'post_type' => 'attachment'));
+  if ($thumbnail_image && isset($thumbnail_image[0])) {
+    echo '<span>'.$thumbnail_image[0]->post_excerpt.'</span>';
+  }
+}
+
+
+
+/*----------------------------------------------------------
+	4. Exibe URL da imagem - by leonovais
+		USO: if (function_exists('url_img')) {echo url_img(); }
+		USO: url_img();
+----------------------------------------------------------*/
+function url_img() { 
+$src = wp_get_attachment_image_src(get_post_thumbnail_id($post->ID) ); 
+echo $src[0];}
+
+
+
+/*---------------------------------------------------------------------
+	5. Diplay imagem destacada ou not-imagem
+		<?php if(function_exists('if_img')){if_img();} ?>
+---------------------------------------------------------------------*/
+if ( ! function_exists( 'if_img' ) ) :
+function if_img() {
+	if(has_post_thumbnail()) { ?>
+		<img src="<?php url_img(); ?>" alt="<?php the_title() ;?>">
+	<?php } else { ?>
+ 		<img src="<?php	tb_theme(); ?>/imgs/not-img.png" alt="<?php the_title() ;?>"> 
+ 	<?php } ;
+}     
+endif;
+
+
+
+
+
+
+
+
+
+
+
+	
+/*================================================================
+	CUSTOM COLUMNS CONFIG
+		1. Add imagem miniatura - Custom Columns
+		2. Add numero de arquivos anexados ao post
+		3. Add Post ID - Custom Columns 
+		4. Remove itens Custom Columns
+================================================================*/
+	
+	
+/* 1. Add imagem miniatura - Custom Columns
+--------------------------------------------------------------------*/
+function posts_columns($defaults){
+    $defaults['col_imagem'] = __('Miniatura');
+    return $defaults;
+	}
+function tb_thumbs_columns($column_name, $id){
+	if($column_name === 'col_imagem'){
+		echo the_post_thumbnail( 'thumbnail' );
+	}}
+add_filter('manage_posts_columns', 'posts_columns', 5);
+add_action('manage_posts_custom_column', 'tb_thumbs_columns', 5, 2);
+
+
+
+/* 2. Add numero de arquivos anexados ao post
+--------------------------------------------------------------------*/
+function tb_columns_attachment_count($defaults){
+	$defaults['col_anexo'] = __('Anexos');
+	return $defaults;
+	}
+function tb_columns_anexo_count($column_name, $id){
+	if($column_name === 'col_anexo'){
+		$attachments = get_children(array('post_parent'=>$id));
+		$count = count($attachments);
+	if($count !=0){echo $count;}
+} }
+add_filter('manage_posts_columns', 'tb_columns_attachment_count', 5);
+add_action('manage_posts_custom_column', 'tb_columns_anexo_count', 4, 2);
+
+
+
+
+/* 3. Add Post ID - Custom Columns 
+--------------------------------------------------------------------*/
+function posts_columns_id($defaults){
+		$defaults['col_postID'] = ('ID'); return $defaults; }
+function posts_custom_id_columns($column_name, $id){
+		if($column_name === 'col_postID'){ echo $id;
+} }
+add_filter('manage_posts_columns', 'posts_columns_id', 5);
+add_action('manage_posts_custom_column', 'posts_custom_id_columns', 5, 2);
+add_filter('manage_pages_columns', 'posts_columns_id', 5);
+add_action('manage_pages_custom_column', 'posts_custom_id_columns', 5, 2);
+
+
+
+
+
+
+
+
+/*================================================================
+	REMOVE ITENS CUSTOM COLUMNS
+		unset($defaults['title']);
+		unset($defaults['author']);
+		unset($defaults['categories']);	
+		unset($defaults['tags']);
+		unset($defaults['comments']);	
+		unset($defaults['date']);
+		unset($defaults['col_imagem']);	
+		unset($defaults['col_video']);
+		unset($defaults['col_anexo']);
+		unset($defaults['col_postID']);			
+		unset($defaults['col_views']);
+================================================================*/
+function remove_post_columns($defaults) {
+  unset($defaults['comments']);
+	unset($defaults['col_views']);
+  return $defaults;
+}
+add_filter('manage_post_posts_columns', 'remove_post_columns');
+
+
+
+
+
+/*================================================================
+	GERAIS CONFIG 
+ 		1. Remove formatação automatica editor
+ 		2. Remove AutoSave Dashboard
+ 		3. Remove estilos (css) Plugin Contact Form 7
+		4. Add oEmbed em Texto / HTML Widgets
+		5. Add URL link site USO: tb_url();
+		6. Add URL theme diretorio USO: tb_theme();
+		7. Add URL Post Type USO: url_post_type();
+		8. Add Favicon header
+		9. Diplay botões escondidos do editor 
+		10. Add suport fonts "dashicons" Wordpress 3.8 ou + 
+================================================================*/
+	
+/* 1. Remove formatação automatica editor
+--------------------------------------------------------------------*/
+	remove_filter('the_content', 'wptexturize');	
+	remove_filter('the_excerpt', 'wptexturize');	
+	remove_filter('comment_text', 'wptexturize');
+	//remove_filter('the_title', 'wptexturize');
+
+
+
+/* 2. Remove AutoSave Dashboard 
+--------------------------------------------------------------------*/
+function tb_disable(){ wp_deregister_script('autosave'); }		
+add_action( 'wp_print_scripts', 'tb_disable');
+		
+
+/* 3. Remove estilos (css) Plugin Contact Form 7  
+--------------------------------------------------------------------*/
+function tb_deregister_cf7_styles() { wp_deregister_style('contact-form-7');  }
+add_action('wp_enqueue_scripts', 'tb_deregister_cf7_styles', 100);
+	
+
+/* 4. Add oEmbed em Texto / HTML Widgets
+--------------------------------------------------------------------*/
+	add_filter( 'widget_text', array( $wp_embed, 'run_shortcode' ), 8 );	
+	add_filter( 'widget_text', array( $wp_embed, 'autoembed'), 8 );
+	
+
+/* 5. Add URL link site USO: tb_url();
+--------------------------------------------------------------------*/
+function tb_url() { bloginfo('url'); 	} 
+add_action('link_site','tb_url');
+
+
+/* 6. Add URL theme diretorio USO: tb_theme();
+--------------------------------------------------------------------*/
+function tb_theme() { bloginfo('stylesheet_directory'); } 
+add_action('diretorio_site','tb_theme');
+
+
+
+/* 7. Add URL Post Type USO: url_post_type(); 
+--------------------------------------------------------------------*/
+function url_post_type() {
+    $homeLink = home_url();
+      if ( get_post_type() != 'post' ) {
+        $post_type = get_post_type_object(get_post_type());
+        $slug = $post_type->rewrite;
+        /*echo '<a href="' . $homeLink . '/' . $slug['slug'] . '/">' . $post_type->labels->singular_name . '</a>';*/
+		echo '<a class="all '. $slug['slug'] .'" href="' . $homeLink . '/' . $slug['slug'] . '/">Ver Todos</a>';
+      } else {}
+} 
+
+
+/* 8. Add Favicon header  
+--------------------------------------------------------------------*/
+function tb_favicon() { echo '
+<link rel="icon" href="'.get_bloginfo('wpurl').'/favicon.png" />';
+	} 
+add_action('wp_head', 'tb_favicon');	
+
+
+/* 9. Diplay botões escondidos do editor 
+--------------------------------------------------------------------*/
+function enable_more_buttons($buttons) {
+  $buttons[] = 'hr';
+  $buttons[] = 'sup';
+  return $buttons;
+}
+add_filter("mce_buttons", "enable_more_buttons");
+
+
+
+/* 10. Add suport fonts "dashicons" Wordpress 3.8 ou + 
+--------------------------------------------------------------------*/
+add_action( 'wp_enqueue_scripts', 'tb_dashicons' );
+function tb_dashicons() {
+wp_enqueue_style( 'themename-style', get_stylesheet_uri(), array( 'dashicons' ), '1.0' );
+}
+
+
+
+
+/*---------------------------------------------------------------------------------
+	SHORTCODE CONFIG
+		USO: echo do_shortcode('[galery class="galery" br="true" span="true" title="true" link="true"]');
+		USO: echo do_shortcode('[tbslide class="bxfotos"]'); 
+	
+---------------------------------------------------------------------------------*/
+
+/* Add Galery - Sem exibir imagem destacada
+--------------------------------------------------------------------*/
+add_shortcode('galery', 'tb_galery');
+function tb_galery($atts, $content = null) {
+	extract(shortcode_atts(array(
+		'small_img' => 'thumbnail',
+		'large_img' => 'large',
+		
+		'link_title' => 'true',
+		'link' => '',
+		'rel' => 'group1',
+		'br' => '',
+		'span' => '',
+		
+		'parent_galery' => 'div',
+		'child_galery' => '',
+		'id' => '',
+		'class' => ''
+		), $atts));
+
+	global $post;
+		$images = get_posts('post_type=attachment&post_mime_type=image&numberposts=-1&post_parent='.$post->ID.'&orderby=menu_order&order=ASC&exclude='. get_post_thumbnail_id( $post->ID ) .' ');
+	if ( empty($images) ) {
+		echo '';
+	} else {
+		$id = ( $id != '' ) ? ' id="'.$id.'"' : '';
+		$class = ( $class != '' ) ? ' class="'.$class.'"' : '';
+		$html = ($parent_galery!='')?"<{$parent_galery}{$id}{$class}>\r\n":'';
+		$lightbox = ($rel=='')?'':' class="'.$rel.'"';
+		
+		foreach ( $images as $image ) {
+	
+			$title = ($link_title=='true')?' alt="'.ucwords(str_replace('-',' ',$image->post_title)).'"':'';
+			$lrg_img = wp_get_attachment_image_src($image->ID,$large_img);
+			$thumb_img = wp_get_attachment_image_src( $image->ID, $small_img );
+			
+			$html .= ($child_galery!='')?"<{$child_galery}>\r\n":'';
+			$html .= ($link=='true')?"\t<a href=\"{$lrg_img[0]}\"{$lightbox}>":'';
+			
+			$html .= ($span=='true')?"<span></span>\r\n":"\n\t";
+			$html .= '<img src="'.$thumb_img[0].'" '.$title.' />';
+			
+			$html .= ($link=='true')?"</a>\r\n":"\n\t";
+			$html .= ($child_galery!='')?"</{$child_galery}>\r\n":'';
+			
+			$lrg_img = '';
+		}
+		$html .= ($br=='true')?"<br>\r\n":"\n\t";
+		$html .= ($parent_galery!='')?"</{$parent_galery}>":'';
+		return $html;
+	} }
+
+
+
+/* Add Galery - Ixibindo imagem destacada - ideal para galeria em slider
+--------------------------------------------------------------------------------*/
+add_shortcode('tbslide',		'tb_slide');
+	function tb_slide($atts, $content = null) {
+	extract(shortcode_atts(array(
+		'small_img' => 'thumbnail',
+		'large_img' => 'large',
+		'link_title' => 'true',
+		'link' => '',
+		'rel' => 'group1',
+		'br' => '',
+		'span' => '',
+		'parent_galery' => 'div',
+		'child_galery' => '',
+		'id' => '',
+		'class' => ''
+		), $atts));
+
+	global $post;
+		$images = get_posts('post_type=attachment&post_mime_type=image&numberposts=-1&post_parent='.$post->ID.'&orderby=menu_order&order=ASC');
+	if ( empty($images) ) {
+		echo '';
+	} else {
+		$id = ( $id != '' ) ? ' id="'.$id.'"' : '';
+		$class = ( $class != '' ) ? ' class="'.$class.'"' : '';
+		$html = ($parent_galery!='')?"<{$parent_galery}{$id}{$class}>\r\n":'';
+		$lightbox = ($rel=='')?'':' class="'.$rel.'"';
+		
+		foreach ( $images as $image ) {
+	
+			$title = ($link_title=='true')?' title="'.ucwords(str_replace('-',' ',$image->post_title)).'"':'';
+			$lrg_img = wp_get_attachment_image_src($image->ID,$large_img);
+			$thumb_img = wp_get_attachment_image_src( $image->ID, $small_img );
+			
+			$html .= ($child_galery!='')?"<{$child_galery}>\r\n":'';
+			$html .= ($link=='true')?"\t<a href=\"{$lrg_img[0]}\"{$lightbox}>":'';
+			
+			$html .= '<img src="'.$thumb_img[0].'" '.$title.' />';
+			
+			$html .= ($link=='true')?"</a>\r\n":"\n\t";
+			$html .= ($child_galery!='')?"</{$child_galery}>\r\n":'';
+			
+			$lrg_img = '';
+		}
+		$html .= ($br=='true')?"<br>\r\n":"\n\t";
+		$html .= ($parent_galery!='')?"</{$parent_galery}>":'';
+		return $html;
+	} }
+
+
+
+
+	
+/* --------------------------------------------------------------------------------------
+	Diplay custom fields usando "CustomField('My_Custom_Field', true);"
+	USO: CustomField('My_Custom_Field', true);
+	USO: if (function_exists('CustomField') ){ CustomField('My_Custom_Field', true); }
+-----------------------------------------------------------------------------------------*/
+if ( ! function_exists( 'CustomField' ) ) :
+function CustomField($szKey, $bPrint = false) {
+ global $post;  $szValue = get_post_meta($post->ID, $szKey, true);
+    if ( $bPrint == false ) return $szValue; else echo $szValue;
+}
+endif;
+
+
+	
+
+
+/* ------------------------------------------------------------------
+	FILTROS - DASHBOARD WORDPRESS
+	 	Dashboard - Metabox display single colum
+		Dashboard - Remove Metabox
+		Dashboard - Remove Widgets
+		Dashboard - Remove links Dashboard
+		DashBoard - Diplay Estatisticas Post Type  
+--------------------------------------------------------------------*/	
+
+
+/* Dashboard - Metabox display single colum
+--------------------------------------------------------------------*/
+add_filter( 'screen_layout_columns', 'single_screen_columns' );
+add_filter( 'get_user_option_screen_layout_dashboard', 'single_screen_dashboard' );
+	function single_screen_columns( $columns ) { 
+		$columns['dashboard'] = 1; return $columns; }
+	function single_screen_dashboard(){return 1;
+	}	
+
+
+
+/* Dashboard - Remove Metabox
+--------------------------------------------------------------------*/
+function tb_disable_default() {
+	remove_meta_box('dashboard_recent_comments', 'dashboard', 'core');
+	remove_meta_box('dashboard_incoming_links', 'dashboard', 'core');
+	remove_meta_box('dashboard_plugins', 'dashboard', 'core');
+	remove_meta_box('dashboard_quick_press', 'dashboard', 'core');
+	remove_meta_box('dashboard_recent_drafts', 'dashboard', 'core');
+	remove_meta_box('dashboard_primary', 'dashboard', 'core');
+	remove_meta_box('dashboard_secondary', 'dashboard', 'core');
+	
+	/* For posts & Page----------------------*/
+	remove_meta_box( 'authordiv' , 'post' , 'normal' ); 			
+	remove_meta_box( 'postcustom' , 'post' , 'normal' );			 
+	remove_meta_box( 'commentstatusdiv' , 'post', 'normal' ); 		 
+	remove_meta_box( 'commentsdiv' , 'post' , 'normal' ); 			
+	remove_meta_box( 'postexcerpt','post','normal'); 				
+	remove_meta_box( 'formatdiv','post','normal'); 					
+	remove_meta_box( 'trackbacksdiv','post','normal');				
+	remove_meta_box( 'revisionsdiv' , 'post' , 'normal' ); 			
+	remove_meta_box( 'slugdiv' , 'post' , 'normal' ); 				
+	remove_meta_box( 'tagsdiv-post_tag','post','normal'); 			
+	remove_meta_box( 'postcustom' , 'page' , 'normal' );			
+	remove_meta_box( 'commentsdiv' , 'page' , 'normal' );			
+	remove_meta_box( 'commentstatusdiv' , 'page' , 'normal' );		
+	remove_meta_box( 'revisionsdiv' , 'page' , 'normal' );			
+	remove_meta_box( 'authordiv' , 'page' , 'normal' );	}
+add_action('admin_init', 'tb_disable_default');
+
+
+
+/* Dashboard - Remove Widgets
+--------------------------------------------------------------------*/
+add_action('widgets_init','tb_remove_widgets', 1);
+function tb_remove_widgets(){
+	//unregister_widget('WP_Widget_Pages');
+	//unregister_widget('WP_Widget_Archives');
+	//unregister_widget('WP_Widget_Meta');
+	//unregister_widget('WP_Widget_Text');
+	//unregister_widget('WP_Widget_Categories');
+	unregister_widget('WP_Widget_Calendar');
+	unregister_widget('WP_Widget_Links');
+	unregister_widget('WP_Widget_Search');
+	unregister_widget('WP_Widget_Recent_Posts');
+	unregister_widget('WP_Widget_Recent_Comments');
+	unregister_widget('WP_Widget_RSS');
+	unregister_widget('WP_Widget_Tag_Cloud'); } 
+
+
+
+/* Dashboard - Remove links Dashboard
+--------------------------------------------------------------------*/
+add_action( 'admin_menu', 'remove_links_menu' );
+function remove_links_menu() {
+	//remove_menu_page('index.php'); 								// Dashboard
+	//remove_menu_page('edit.php'); 								// Posts
+	//remove_menu_page('upload.php'); 							// Media
+	//remove_menu_page('edit.php?post_type=page'); 	// Pages
+	remove_menu_page('edit-comments.php'); 					// Comments
+	//remove_menu_page('themes.php'); 							// Appearance
+	//remove_menu_page('plugins.php'); 							// Plugins
+	//remove_menu_page('users.php'); 								// Users
+	//remove_menu_page('tools.php'); 								// Tools
+	//remove_menu_page('options-general.php'); 			// Settings
+	}
+
+
+
+/* DashBoard - Diplay Estatisticas Post Type
+--------------------------------------------------------------------*/
+add_action( 'dashboard_glance_items', 'cpad_at_glance_content_table_end' );
+function cpad_at_glance_content_table_end() {
+    $args = array(
+        'public' => true,
+        '_builtin' => false
+    );
+    $output = 'object';
+    $operator = 'and';
+    
+    $post_types = get_post_types( $args, $output, $operator );
+    foreach ( $post_types as $post_type ) {
+        $num_posts = wp_count_posts( $post_type->name );
+        $num = number_format_i18n( $num_posts->publish );
+        $text = _n( $post_type->labels->singular_name, $post_type->labels->name, intval( $num_posts->publish ) );
+        if ( current_user_can( 'edit_posts' ) ) {
+            $output = '<a href="edit.php?post_type=' . $post_type->name . '">' . $num . ' ' . $text . '</a>';
+            echo '<li class="post-count ' . $post_type->name . '-count">' . $output . '</li>';
+        }
+    }
+    $taxonomies = get_taxonomies( $args, $output, $operator );
+    foreach ( $taxonomies as $taxonomy ) {
+        $num_terms = wp_count_terms( $taxonomy->name );
+        $num = number_format_i18n( $num_terms );
+        $text = _n( $taxonomy->labels->singular_name, $taxonomy->labels->name, intval( $num_terms ) );
+        if ( current_user_can( 'manage_categories' ) ) {
+            $output = '<a href="edit-tags.php?taxonomy=' . $taxonomy->name . '">' . $num . ' ' . $text . '</a>';
+            echo '<li class="taxonomy-count ' . $taxonomy->name . '-count">' . $output . '</li>';
+        }
+    }
+}
+
+
+
+
+/* Remove Tags Header
+--------------------------------------------------------------------*/
+remove_action( 'wp_head', 'feed_links_extra', 3 );
+remove_action( 'wp_head', 'feed_links', 2 );
+remove_action( 'wp_head', 'rsd_link');
+remove_action( 'wp_head', 'wlwmanifest_link');
+remove_action( 'wp_head', 'index_rel_link');
+remove_action( 'wp_head', 'parent_post_rel_link');
+remove_action( 'wp_head', 'start_post_rel_link');
+remove_action( 'wp_head', 'wp_generator');
+remove_action( 'wp_head', 'rel_canonical' );
+remove_action( 'wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0 );
+
+
+
+
+/*--------------------------------------------------------------------
+	Configuração ao ativar o tema
+--------------------------------------------------------------------*/
+add_action('after_setup_theme','tb_theme_setup');
+	function tb_theme_setup() {
+	$the_theme_status = get_option('theme_setup_status');
+	if ( $the_theme_status !== '1' ) {
+		$core_settings = array(
+			'avatar_default'		=> 'blank',		// Avatar do comentario 
+			'avatar_rating'			=> 'G',				// Avatar rating
+			'comment_max_links'		=> 0,				// bloquear links e comentarios
+			'comments_per_page'		=> 20				// padrão 20 comentarios por pagina
+		);
+
+foreach ( $core_settings as $k => $v ) { update_option( $k, $v ); }
+	wp_delete_post( 1, true );
+	wp_delete_post( 2, true );
+	wp_delete_comment( 1 );
+	update_option( 'theme_setup_status', '1' );
+	$msg = '<p class="error">O '. get_option('current_theme').' mudou a <a href="'.admin_url().'options-general.php">configuração</a> padrão do WordPress</p>';
+	add_action( 'admin_notices', $c = create_function( '', 'echo "' . addcslashes( $msg, '"' ) . '";' ));
+}
+	elseif ( $the_theme_status === '1' and isset( $_GET['activated'] )) {
+		$msg = '<p class="updated">O tema ' .get_option('current_theme'). ' foi reativado com sucesso.</div>';
+	add_action( 'admin_notices', $c = create_function( '', 'echo "' . addcslashes( $msg, '"' ) . '";' ));
+} }
+?>
